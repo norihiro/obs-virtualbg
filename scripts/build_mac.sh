@@ -25,5 +25,29 @@ pushd build
     -DHalideHelpers_DIR=$(cd ../deps/Halide; pwd)/lib/cmake/HalideHelpers \
     -DLLVM_DIR=/usr/local/Cellar/llvm/${LLVM_VERSION}/lib/cmake/llvm
   cmake --build . --config Release
+  echo "Files in $PWD:"
+  ls -R
+  echo
+  echo "Files in dependency directories:"
+  ls -R ../deps/onnxruntime ../deps/Halide
+
+  dylibs=(
+    build/obs-virtualbg.so
+  )
+  set +x # for code signing, hide itentity.
+  for dylib in "${dylibs[@]}"; do
+    test -f "$dylib" || continue
+    chmod +rw $dylib
+    echo "=> Dependencies for $(basename $dylib)"
+    otool -L $dylib
+    if test -n "$CODE_SIGNING_IDENTITY"; then
+      echo "=> Signing plugin binary: $dylib"
+      codesign --sign "$CODE_SIGNING_IDENTITY" $dylib
+    else
+      echo "=> Skipped plugin codesigning since RELEASE_MODE=$RELEASE_MODE"
+    fi
+  done
+  set -x
+
   cpack
 popd
