@@ -46,6 +46,7 @@ pushd build
     fi
   done
   set -x
+  sha1sum "${dylibs[@]}"
 
   cpack
 popd
