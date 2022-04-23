@@ -25,33 +25,5 @@ pushd build
     -DHalideHelpers_DIR=$(cd ../deps/Halide; pwd)/lib/cmake/HalideHelpers \
     -DLLVM_DIR=/usr/local/Cellar/llvm/${LLVM_VERSION}/lib/cmake/llvm
   cmake --build . --config Release
-
-  dylibs=(
-    obs-virtualbg.so
-  )
-  set +x # for code signing, hide itentity.
-  for dylib in "${dylibs[@]}"; do
-    if test ! -f "$dylib"; then
-      echo "Warning: File '$dylib' is not found."
-      continue
-    fi
-    chmod +rw $dylib
-    echo "=> Dependencies for $(basename $dylib)"
-    otool -L $dylib
-    if test -n "$MACOS_SIGNING_APPLICATION_IDENTITY"; then
-      echo "=> Signing plugin binary: $dylib"
-      codesign --sign "$MACOS_SIGNING_APPLICATION_IDENTITY" $dylib
-    else
-      echo "=> Skipped plugin codesigning since MACOS_SIGNING_APPLICATION_IDENTITY is not set"
-    fi
-  done
-  set -x
-  shasum "${dylibs[@]}"
-
   cpack
 popd
-
-mkdir t
-cd t
-unzip ../build/obs-virtualbg-*.zip
-shasum obs-virtualbg/bin/obs-virtualbg.so
