@@ -46,7 +46,12 @@ pushd build
     fi
   done
   set -x
-  sha1sum "${dylibs[@]}"
+  shasum "${dylibs[@]}"
 
   cpack
 popd
+
+mkdir t
+cd t
+unzip ../build/obs-virtualbg-*.zip
+shasum obs-virtualbg/bin/obs-virtualbg.so
