@@ -2,6 +2,8 @@
 
 CODESIGN_IDENT_SHORT=$(echo "${MACOS_SIGNING_APPLICATION_IDENTITY}" | /usr/bin/sed -En "s/.+\((.+)\)/\1/p")
 
+ret=0
+
 pkgs=(build/obs-virtualbg-*.zip)
 uuids=()
 for pkg in "${pkgs[@]}"; do
@@ -15,11 +17,13 @@ for pkg in "${pkgs[@]}"; do
     --file "$pkg")
   uuid=$(echo $UPLOAD_RESULT | awk -F ' = ' '/RequestUUID/ {print $2}')
   echo "Request UUID: $uuid"
-  uuids=("${uuids[@]}" $uuid)
+  if test -z "$uuid"; then
+    ret=1
+  fi
+  uuids=("${uuids[@]}" "$uuid")
   echo "$uuid $pkg" >> pkg_uuid
 done
 
-ret=0
 for uuid in "${uuids[@]}"; do
   pkg="$(grep "$uuid" < pkg_uuid | cut -d\  -f2-)"
   echo "Checking notarization status for package '$pkg' UUID=$uuid..."
