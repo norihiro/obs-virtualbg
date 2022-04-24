@@ -19,6 +19,7 @@ for pkg in "${pkgs[@]}"; do
   echo "$uuid $pkg" >> pkg_uuid
 done
 
+ret=0
 for uuid in "${uuids[@]}"; do
   pkg="$(grep "$uuid" < pkg_uuid | cut -d\  -f2-)"
   echo "Checking notarization status for package '$pkg' UUID=$uuid..."
@@ -28,14 +29,20 @@ for uuid in "${uuids[@]}"; do
       --username "$MACOS_NOTARIZATION_USERNAME" \
       --password "$MACOS_NOTARIZATION_PASSWORD" \
       --asc-provider "$CODESIGN_IDENT_SHORT")
-    echo $CHECK_RESULT
+    echo "$CHECK_RESULT"
 
     if ! grep -q "Status: in progress" <<< "$CHECK_RESULT"; then
-      if expr "$pkg" : '.*dmg$'; then
-        echo "=> Staple ticket to installer: $pkg"
-        xcrun stapler staple "$pkg"
+      if grep -q 'Status: success' <<< "$CHECK_RESULT"; then
+        if expr "$pkg" : '.*dmg$'; then
+          echo "=> Staple ticket to installer: $pkg"
+          xcrun stapler staple "$pkg"
+        fi
+      else
+        ret=1
       fi
       break
     fi
   done
 done
+
+exit $ret
