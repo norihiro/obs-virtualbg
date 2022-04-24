@@ -26,11 +26,22 @@ jobs:
   build_mac:
     name: build on Mac
     runs-on: macos-latest
+    env:
+      HAVE_CODESIGN_IDENTITY: ${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY != '' && secrets.MACOS_SIGNING_CERT != '' }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: 'Install Apple Developer Certificate'
+        if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && env.HAVE_CODESIGN_IDENTITY == 'true' }}
+        uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071
+        with:
+          p12-file-base64: ${{ secrets.MACOS_SIGNING_CERT }}
+          p12-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
       - name: Cache ONNX Runtime
         uses: actions/cache@v2
         env:
@@ -44,11 +55,21 @@ jobs:
         run: ./scripts/install_deps_mac.sh
       - name: build
         run: ./scripts/build_mac.sh
-      # - name: Upload artifacts
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: mac-archive
-      #     path: build/obs-virtualbg-*.zip
+      - name: codesign and notarize
+        if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && env.HAVE_CODESIGN_IDENTITY == 'true' }}
+        env:
+          MACOS_SIGNING_APPLICATION_IDENTITY: ${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}
+          MACOS_BUNDLEID: ${{ secrets.MACOS_BUNDLEID }}
+          MACOS_NOTARIZATION_USERNAME: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
+          MACOS_NOTARIZATION_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+        run: |
+          ./scripts/codesign_mac.sh
+          ./scripts/notarize_mac.sh
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: mac-archive
+          path: build/obs-virtualbg-*.zip
   build_linux:
     name: build on Linux
     runs-on: ubuntu-20.04
