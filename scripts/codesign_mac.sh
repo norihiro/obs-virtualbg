@@ -25,4 +25,4 @@ for dylib in "${dylibs[@]}"; do
 done
 shasum "${dylibs[@]}"
 
-(cd codesign && zip -r ../${pkg} *)
+# (cd codesign && zip -r ../${pkg} *)
